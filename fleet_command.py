@@ -14,6 +14,7 @@ from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 from pathlib import Path
 
 HOME = Path.home()
+SCRIPT_DIR = Path(__file__).resolve().parent
 HOSTS_JSON = HOME / ".hermes/fleet_hosts.json"
 ENGINE = HOME / ".hermes/scripts/operator_fleet_sync.py"
 AUDIT = HOME / ".hermes/logs/fleet_sync.jsonl"
@@ -21,8 +22,11 @@ IDENTITY = HOME / ".ssh/fleet_sync_ed25519"
 VERSION = "1.2"
 ORIGIN = "https://fleet.local:9220"
 RP_ID = "fleet.local"
-PAGE_FILE = HOME / ".hermes/scripts/fleet_command_page.html"
-PAGE = PAGE_FILE.read_text() if PAGE_FILE.is_file() else "<h1>fleet_command_page.html missing</h1>"
+# UI page ships NEXT TO THE SCRIPT (repo-relative), with the legacy ~/.hermes path as fallback
+PAGE_FILE = SCRIPT_DIR / "fleet_command_page.html"
+if not PAGE_FILE.is_file():
+    PAGE_FILE = HOME / ".hermes/scripts/fleet_command_page.html"
+PAGE = PAGE_FILE.read_text() if PAGE_FILE.is_file() else "<h1>fleet_command_page.html missing — keep it beside fleet_command.py</h1>"
 
 # ---------------------------------------------------------------- fleet state
 
