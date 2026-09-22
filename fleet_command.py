@@ -520,7 +520,7 @@ def forge_submit(acts, cycles=1):
     except Exception:
         landed = False
     return (ok := r.returncode == 0) and landed, (
-        f"job queued on ZEPHYRE: acts={','.join(acts)} cycles={cycles}"
+        f"job queued on RIG-01: acts={','.join(acts)} cycles={cycles}"
         if landed else f"queue failed: {(r.stderr or v.stdout or 'readback mismatch')[:150]}")
 
 def forge_status():

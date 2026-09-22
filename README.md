@@ -14,9 +14,9 @@ laptops, NUCs — and is tired of SSHing into five terminals to answer
 ┌─────────────────────────────────────────────────────┐
 │  FLEET COMMAND CENTER          https://your-hub.local:9220 │
 ├──────────┬──────────┬──────────────┬─────────────────┤
-│ KALI     │ ZEPHYRE  │ TEMPORALFLOW │ NUC25           │
-│ ONLINE   │ ONLINE   │ ONLINE       │ PENDING         │
-│ 3 chips  │ 2 chips  │ 2 chips      │ needs sshd      │
+│ HUB-ALPHA │ RIG-01   │ LAPTOP-02    │ NUC-03          │
+│ ONLINE    │ ONLINE   │ ONLINE       │ PENDING         │
+│ 3 chips   │ 2 chips  │ 2 chips      │ needs sshd      │
 ├──────────┴──────────┴──────────────┴─────────────────┤
 │ THUNDER  — broadcast one command to every machine    │
 │ SPECTRUM — live CPU/RAM/disk/GPU from all members    │
@@ -63,7 +63,8 @@ OpenSSH Server (Settings → Optional Features).
 - [Security model](docs/SECURITY.md) — how the passkey flow works
 
 ## Screenshots
-See `screenshots/` — dark ops-console UI, mobile-friendly.
+See `screenshots/console_demo.png` — a synthetic demo render (all data in it is placeholder;
+your real console shows your own fleet).
 
 ## License
 MIT. See [LICENSE](LICENSE). If it makes your homelab life better, a ⭐ or

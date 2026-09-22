@@ -91,7 +91,7 @@ footer{max-width:1280px;margin:0 auto;padding:10px 22px 30px;color:var(--dim);fo
   <div class="toolbar"><button class="primary" onclick="loadSpectrum(this)">HARVEST FLEET TELEMETRY</button></div>
   <div id="spectrum-grid" class="grid"></div>
 
-  <h3 style="margin-top:22px">FORGE — GPU render bridge (ZEPHYRE · RTX 5090)</h3>
+  <h3 style="margin-top:22px">FORGE — GPU render bridge (RIG-01 · RTX 5090)</h3>
   <div class="toolbar">
     <select id="forge-act" style="background:var(--panel2);color:var(--txt);border:1px solid var(--line);border-radius:8px;padding:8px">
       <option value="body_worship">body_worship</option>
@@ -578,7 +578,7 @@ function forgeLine(msg, cls){
 async function forgeSubmit(btn){
   btn.disabled = true;
   const act = document.getElementById("forge-act").value;
-  forgeLine(`submitting render job to ZEPHYRE: ${act} ×1 cycle…`, "running");
+  forgeLine(`submitting render job to RIG-01: ${act} ×1 cycle…`, "running");
   try{
     const r = await fetch("/api/forge/submit", {method:"POST", body: JSON.stringify({acts:[act], cycles:1})});
     const {op} = await r.json();
@@ -608,7 +608,7 @@ async function forgeStatus(btn){
 
 async function forgeFetch(btn){
   btn.disabled = true;
-  forgeLine("pulling newest artifacts ZEPHYRE -> your hub through the fleet fabric…", "running");
+  forgeLine("pulling newest artifacts RIG-01 -> your hub through the fleet fabric…", "running");
   try{
     const r = await fetch("/api/forge/fetch", {method:"POST"});
     const {op} = await r.json();
