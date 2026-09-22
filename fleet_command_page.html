@@ -1,0 +1,738 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Fleet Command Center</title>
+<style>
+:root{--bg:#0b0e14;--panel:#12161f;--panel2:#181d29;--line:#232a3a;--txt:#d7dee9;--dim:#7c8798;
+--green:#3ddc84;--red:#ff5d5d;--amber:#ffb648;--blue:#4ea1ff;--violet:#a88bff}
+*{box-sizing:border-box;margin:0;padding:0}
+body{background:var(--bg);color:var(--txt);font:14px/1.45 "Segoe UI",system-ui,sans-serif;min-height:100vh}
+header{display:flex;align-items:center;justify-content:space-between;padding:14px 22px;
+background:linear-gradient(180deg,#151b28,#10141d);border-bottom:1px solid var(--line);position:sticky;top:0;z-index:5}
+header h1{font-size:17px;letter-spacing:.14em;font-weight:600}
+header h1 span{color:var(--green)}
+.hdr-meta{display:flex;gap:18px;align-items:center;color:var(--dim);font-size:12px}
+.lamp{width:9px;height:9px;border-radius:50%;display:inline-block;margin-right:6px;vertical-align:1px}
+.lamp.g{background:var(--green);box-shadow:0 0 8px var(--green)}
+.lamp.a{background:var(--amber);box-shadow:0 0 8px var(--amber)}
+.lamp.r{background:var(--red);box-shadow:0 0 8px var(--red)}
+main{max-width:1280px;margin:0 auto;padding:20px 22px 60px}
+.toolbar{display:flex;gap:10px;align-items:center;margin-bottom:18px;flex-wrap:wrap}
+button{background:var(--panel2);color:var(--txt);border:1px solid var(--line);border-radius:8px;
+padding:8px 14px;font-size:13px;cursor:pointer;transition:.15s}
+button:hover{border-color:var(--blue);color:#fff}
+button:disabled{opacity:.45;cursor:wait}
+button.primary{background:#173c5e;border-color:#2a5f96}
+button.danger{border-color:#6e2a2a}
+.fleetbar{margin-left:auto;display:flex;gap:14px;font-size:12px;color:var(--dim)}
+.fleetbar b{color:var(--txt)}
+.grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(370px,1fr));gap:16px}
+.card{background:var(--panel);border:1px solid var(--line);border-radius:12px;padding:16px;position:relative}
+.card h2{font-size:15px;letter-spacing:.06em;margin-bottom:2px}
+.card .sub{color:var(--dim);font-size:12px;margin-bottom:12px}
+.state{position:absolute;top:14px;right:16px;font-size:11px;letter-spacing:.12em;font-weight:700}
+.state.ONLINE{color:var(--green)}.state.REACHABLE{color:var(--amber)}.state.DOWN{color:var(--red)}
+.state.PENDING{color:var(--violet)}.state.UNKNOWN{color:var(--dim)}
+.kv{display:grid;grid-template-columns:auto 1fr;gap:3px 12px;font-size:12.5px;margin:10px 0}
+.kv div:nth-child(odd){color:var(--dim)}
+.svcs{display:flex;gap:8px;flex-wrap:wrap;margin:10px 0}
+.svc{font-size:11px;padding:3px 9px;border-radius:20px;border:1px solid var(--line);color:var(--dim)}
+.svc.up{border-color:#1d5c3a;color:var(--green)}
+.svc.down{border-color:#5c1d1d;color:var(--red)}
+.actions{display:flex;gap:8px;flex-wrap:wrap;margin-top:12px}
+.opline{font-size:11.5px;color:var(--dim);margin-top:8px;min-height:14px;white-space:nowrap;
+overflow:hidden;text-overflow:ellipsis}
+section{margin-top:26px}
+section h3{font-size:13px;letter-spacing:.12em;color:var(--dim);margin-bottom:10px;text-transform:uppercase}
+table{width:100%;border-collapse:collapse;background:var(--panel);border:1px solid var(--line);border-radius:10px;overflow:hidden}
+th,td{padding:8px 12px;text-align:left;font-size:12.5px;border-bottom:1px solid var(--line)}
+th{background:var(--panel2);color:var(--dim);font-weight:600;letter-spacing:.06em}
+td.ok{color:var(--green)}td.fail{color:var(--red)}
+.ops-feed{background:var(--panel);border:1px solid var(--line);border-radius:10px;padding:10px 14px;
+font-family:ui-monospace,Consolas,monospace;font-size:12px;max-height:200px;overflow-y:auto}
+.ops-feed div{padding:2px 0;border-bottom:1px dashed #1c2230}
+.ops-feed .t{color:var(--dim)}
+.ops-feed .done{color:var(--green)}.ops-feed .failed{color:var(--red)}.ops-feed .running{color:var(--amber)}
+footer{max-width:1280px;margin:0 auto;padding:10px 22px 30px;color:var(--dim);font-size:11px}
+</style>
+</head>
+<body>
+<header>
+  <h1>FLEET <span>COMMAND</span> CENTER</h1>
+  <div class="hdr-meta">
+    <span>HUB <b>kali · 192.168.1.2</b></span>
+    <span id="clock">—</span>
+    <span><span class="lamp g" id="probe-lamp"></span><span id="probe-at">probes idle</span></span>
+  </div>
+</header>
+
+<main>
+  <div class="toolbar">
+    <button class="primary" onclick="probeAll(this)">PROBE FLEET</button>
+    <button onclick="openAudit()">AUDIT LOG</button>
+    <div class="fleetbar" id="fleetbar">fleet: awaiting probe</div>
+  </div>
+
+  <div class="grid" id="cards"></div>
+
+  <section>
+    <h3>Operations feed</h3>
+    <div class="ops-feed" id="ops"><div class="t">no operations yet — commands you issue appear here</div></div>
+  </section>
+
+  <section id="tools-sec">
+  <h3>THUNDER — fleet broadcast</h3>
+  <div class="toolbar" id="thunder-bar"></div>
+  <div class="ops-feed" id="thunder-out" style="display:none; max-height:260px"></div>
+
+  <h3 style="margin-top:22px">SPECTRUM — combined telemetry</h3>
+  <div class="toolbar"><button class="primary" onclick="loadSpectrum(this)">HARVEST FLEET TELEMETRY</button></div>
+  <div id="spectrum-grid" class="grid"></div>
+
+  <h3 style="margin-top:22px">FORGE — GPU render bridge (ZEPHYRE · RTX 5090)</h3>
+  <div class="toolbar">
+    <select id="forge-act" style="background:var(--panel2);color:var(--txt);border:1px solid var(--line);border-radius:8px;padding:8px">
+      <option value="body_worship">body_worship</option>
+      <option value="cum_chest">cum_chest</option>
+      <option value="cum_facial">cum_facial</option>
+      <option value="face_fuck">face_fuck</option>
+      <option value="pit_worship">pit_worship</option>
+      <option value="oral_kneel">oral_kneel</option>
+      <option value="nipple_suck">nipple_suck</option>
+      <option value="rim_kneel">rim_kneel</option>
+    </select>
+    <button class="primary" onclick="forgeSubmit(this)">SUBMIT RENDER JOB</button>
+    <button onclick="forgeStatus(this)">PIPELINE STATUS</button>
+    <button onclick="forgeFetch(this)">FETCH ARTIFACTS -> HUB</button>
+  </div>
+  <div class="ops-feed" id="forge-out" style="max-height:260px">no forge operations yet</div>
+</section>
+
+  <section id="armory-sec">
+    <h3>⚔ ARMORY — HEXSTRIKE BATTLE BRIDGE <span id="hex-status" style="font-size:11px"></span></h3>
+    <div class="toolbar">
+      <button class="primary" onclick="armoryLoad(this)">LOAD ARMORY</button>
+      <button onclick="hexStart(this)">START HEXSTRIKE SERVER</button>
+      <button onclick="hexProcesses(this)">PROCESS DASHBOARD</button>
+      <button class="danger" onclick="hexRawToggle(this)">RAW COMMAND MODE</button>
+    </div>
+    <div id="hex-raw" style="display:none; margin:10px 0">
+      <div style="display:flex; gap:8px">
+        <input id="hex-cmd" placeholder="raw shell command (runs on kali via hexstrike)..."
+          style="flex:1;background:var(--panel2);color:var(--txt);border:1px solid var(--line);border-radius:8px;padding:8px;font-family:monospace">
+        <button class="danger" onclick="hexRaw(this)">EXECUTE</button>
+      </div>
+    </div>
+    <div class="toolbar" id="tool-picker" style="margin-top:8px"></div>
+    <div id="tool-form" style="margin:10px 0"></div>
+    <div class="ops-feed" id="armory-out" style="max-height:340px">armory idle — LOAD ARMORY to enumerate weapons</div>
+  </section>
+
+  <section id="apps-sec">
+    <h3>📦 APP LAUNCHER — every desktop app on the kali box</h3>
+    <div class="toolbar"><input id="app-filter" placeholder="filter apps..." oninput="renderAppGrid(this.value)"
+      style="background:var(--panel2);color:var(--txt);border:1px solid var(--line);border-radius:8px;padding:8px;flex:1"></div>
+    <div id="app-grid" style="display:grid;grid-template-columns:repeat(auto-fill,minmax(200px,1fr));gap:8px;margin-top:10px"></div>
+  </section>
+
+<section id="audit-sec" style="display:none">
+    <h3>Sync audit log (newest first)</h3>
+    <table id="audit-tbl">
+      <thead><tr><th>ts (UTC)</th><th>op</th><th>host</th><th>result</th><th>detail</th></tr></thead>
+      <tbody></tbody>
+    </table>
+  </section>
+</main>
+<footer>Fleet Command Center v1.0 — kali hub · engine: operator_fleet_sync.py · fleet_hosts.json is the single source of truth</footer>
+
+<script>
+const $ = s => document.querySelector(s);
+const esc = s => s;  // rendering uses textContent everywhere; never innerHTML with data
+let POLL = null;
+
+function fmtState(st){
+  return st; // ONLINE / REACHABLE / DOWN / PENDING / UNKNOWN
+}
+
+function svcChip(name, info){
+  const d = document.createElement("span");
+  d.className = "svc " + (info && info.up ? "up" : "down");
+  d.textContent = `${name}:${info ? info.port : "?"} ${info && info.up ? "UP" : "down"}`;
+  return d;
+}
+
+function render(hosts, audit, ops, probeAt){
+  const grid = $("#cards");
+  grid.textContent = "";
+  let online=0, total=0;
+  for (const [name, h] of Object.entries(hosts)){
+    total++;
+    if (h.state === "ONLINE") online++;
+    const card = document.createElement("div");
+    card.className = "card";
+
+    const h2 = document.createElement("h2"); h2.textContent = name.toUpperCase() + "  ·  " + h.addr;
+    const sub = document.createElement("div"); sub.className = "sub"; sub.textContent = h.label || "";
+    const st = document.createElement("div"); st.className = "state " + fmtState(h.state); st.textContent = h.state;
+    card.append(h2, sub, st);
+
+    const kv = document.createElement("div"); kv.className = "kv";
+    const addKV = (k,v)=>{ const a=document.createElement("div");a.textContent=k;const b=document.createElement("div");b.textContent=v;kv.append(a,b); };
+    addKV("ssh", h.ssh_ok ? "auth OK" : (h.ssh_up ? "port open, auth failed" : (h.ping ? "closed" : "n/a (down)")));
+    if (h.os_hint) addKV("os", h.os_hint);
+    if (h.remote_root) addKV("root", h.remote_root);
+    const a = (audit||{})[name];
+    if (a) addKV("last sync", `${a.last_op} ${a.last_ts} — ${a.last_ok ? "ok" : "FAILED: " + a.last_detail}`);
+    card.append(kv);
+
+    if (h.services && Object.keys(h.services).length){
+      const sv = document.createElement("div"); sv.className = "svcs";
+      for (const [s,info] of Object.entries(h.services)) sv.append(svcChip(s, info));
+      card.append(sv);
+    }
+
+    const acts = document.createElement("div"); acts.className = "actions";
+    const btn = (label, fn, cls) => { const b=document.createElement("button"); b.textContent=label; if(cls)b.className=cls; b.onclick=fn; acts.append(b); return b; };
+    btn("push", () => act(`/api/push/${name}`, card), "primary");
+    btn("pull", () => act(`/api/pull/${name}`, card));
+    if (h.mac) btn("wake-on-LAN", () => act(`/api/wake/${name}`, card));
+    if (h.ssh_ok) btn("heartbeat status", () => taskStatus(name, card));
+    if (h.ssh_ok) btn("fire heartbeat", () => act(`/api/fire_task/${name}`, card));
+    card.append(acts);
+
+    const op = document.createElement("div"); op.className = "opline"; op.dataset.host = name;
+    card.append(op);
+    grid.append(card);
+  }
+  $("#fleetbar").replaceChildren();  // clearing only — never innerHTML with data
+  const fb = $("#fleetbar");
+  const s1 = document.createElement("span"); s1.append("online ");
+  const b1 = document.createElement("b"); b1.textContent = `${online}/${total}`; s1.append(b1);
+  const s2 = document.createElement("span");
+  const lamp = document.createElement("span"); lamp.className = "lamp " + (online===total?"g":online>0?"a":"r");
+  s2.append(lamp, online===total ? "all systems nominal" : online>0 ? "partial — check cards" : "fleet dark");
+  fb.append(s1, s2);
+  $("#probe-at").textContent = probeAt ? `probes @ ${probeAt}` : "probes idle";
+  renderOps(ops||[]);
+  if (POLL){ clearInterval(POLL); POLL = null; }
+}
+
+function renderOps(ops){
+  const feed = $("#ops");
+  feed.textContent = "";
+  for (const o of ops.slice(0, 14)){
+    const d = document.createElement("div");
+    const t = document.createElement("span"); t.className = "t"; t.textContent = `${o.started}  `;
+    const s = document.createElement("span"); s.className = o.state; 
+    s.textContent = `[${o.state.toUpperCase()}] ${o.kind}${o.host && o.host!=="fleet" ? " "+o.host : ""} — ${o.result || "…"}`;
+    d.append(t, s); feed.append(d);
+  }
+  if (!ops.length){ const d=document.createElement("div"); d.className="t"; d.textContent="no operations yet"; feed.append(d); }
+}
+
+async function refresh(){
+  try{
+    const r = await fetch("/api/state"); const j = await r.json();
+    $("#clock").textContent = j.now;
+    render(j.hosts, j.audit, j.ops, j.probe_at);
+  }catch(e){ $("#probe-at").textContent = "hub unreachable"; }
+}
+
+async function probeAll(btn){
+  btn.disabled = true; btn.textContent = "PROBING…";
+  try{
+    const r = await fetch("/api/probe"); const j = await r.json();
+    LAST = j;
+    const s = await (await fetch("/api/state")).json();
+    render(j, s.audit, s.ops, new Date().toISOString().slice(11,19)+"Z");
+  } finally { btn.disabled = false; btn.textContent = "PROBE FLEET"; }
+}
+
+async function act(url, card){
+  const r = await fetch(url, {method:"POST"});
+  const j = await r.json();
+  const line = card.querySelector(".opline");
+  line.textContent = `${j.op.kind} ${j.op.host}: dispatched…`;
+  watchOp(j.op.id, line);
+}
+
+function watchOp(id, line){
+  const iv = setInterval(async ()=>{
+    const j = await (await fetch("/api/state")).json();
+    const op = (j.ops||[]).find(o=>o.id===id);
+    if (!op) return;
+    line.textContent = `${op.kind} ${op.host}: ${op.state} — ${(op.result||"").slice(0,120)}`;
+    if (op.state !== "running"){ clearInterval(iv); refresh(); }
+  }, 1500);
+}
+
+async function taskStatus(host, card){
+  const j = await (await fetch(`/api/task_status/${host}`)).json();
+  const line = card.querySelector(".opline");
+  line.textContent = j.error ? `heartbeat: ${j.error}` :
+    `heartbeat: status=${j.status||"?"} lastResult=${j.last_result||"?"} lastRun=${j.last_run||"?"}`;
+}
+
+async function openAudit(){
+  const sec = $("#audit-sec");
+  sec.style.display = sec.style.display === "none" ? "block" : "none";
+  if (sec.style.display === "none") return;
+  const j = await (await fetch("/api/audit")).json();
+  const tb = $("#audit-tbl tbody"); tb.textContent = "";
+  for (const r of j.rows.slice(0, 60)){
+    const tr = document.createElement("tr");
+    const td = v => { const d=document.createElement("td"); d.textContent = v==null?"":String(v).slice(0,90); return d; };
+    const ok = !r.err && r.result !== "transport_failed";
+    tr.append(td((r.ts||"").slice(0,19)), td(r.op), td(r.host||"-"));
+    const res = td(ok ? "ok" : "FAILED"); res.className = ok ? "ok" : "fail"; tr.append(res);
+    tr.append(td(r.err ? r.err.split("\n").filter(l=>l&&!l.includes("post-quantum")&&!l.includes("decrypt")&&!l.includes("openssh.com")).join(" ") || "ok" : (r.pulled ? `pulled ${r.pulled.length}` : r.files ? `${r.files} files` : "ok")));
+    tb.append(tr);
+  }
+}
+
+render({}, {}, [], null);
+refresh();
+POLL = setInterval(refresh, 20000);   // gentle re-poll of state/ops (probes stay manual)
+
+// ==================== THUNDER ====================
+const THUNDER_CMDS = [
+  ["win_updates",  "PATCH REPORT",  "latest hotfixes from every Windows box"],
+  ["win_uptime",   "UPTIMES",       "uptime of every Windows member"],
+  ["win_listening","LISTENERS",     "open listener count per box"],
+  ["lin_updates",  "APT PENDING",   "upgradable packages on Linux members"],
+  ["lin_disk",     "DISK (LINUX)",  "root filesystem usage on Linux members"],
+  ["lin_netstat",  "PORTS (LINUX)","listening port count on Linux members"],
+];
+(function buildThunder(){
+  const bar = document.getElementById("thunder-bar");
+  for (const [key, label, tip] of THUNDER_CMDS){
+    const b = document.createElement("button");
+    b.textContent = label; b.title = tip;
+    b.onclick = () => thunder(key, b);
+    bar.append(b);
+  }
+})();
+
+async function thunder(key, btn){
+  btn.disabled = true;
+  const out = document.getElementById("thunder-out");
+  out.style.display = "block";
+  out.replaceChildren();
+  const t = document.createElement("div"); t.className = "t"; t.textContent = `THUNDER ⚡ ${key}: striking every live host…`;
+  out.append(t);
+  try{
+    const r = await fetch(`/api/thunder/${key}`, {method:"POST"});
+    const {op} = await r.json();
+    const iv = setInterval(async ()=>{
+      const s = await (await fetch("/api/state")).json();
+      const o = (s.ops||[]).find(x=>x.id===op.id);
+      if (!o) return;
+      if (o.state !== "running"){
+        clearInterval(iv); btn.disabled = false;
+        out.replaceChildren();
+        const head = document.createElement("div");
+        head.className = o.state; head.textContent = `⚡ THUNDER ${key} — ${o.state.toUpperCase()}`;
+        out.append(head);
+        try{
+          const res = JSON.parse(o.result);
+          for (const [host, v] of Object.entries(res)){
+            const d = document.createElement("div");
+            const tag = document.createElement("span"); tag.className = "t";
+            tag.textContent = `${host}: ${v.ok ? (v.rc==="skip" ? "SKIP" : "OK") : "FAIL"}  `;
+            const body = document.createElement("span"); body.textContent = v.out;
+            d.append(tag, body); out.append(d);
+          }
+        }catch(e){
+          const d = document.createElement("div"); d.textContent = o.result; out.append(d);
+        }
+      }
+    }, 1200);
+  }catch(e){ btn.disabled = false; t.textContent = "thunder failed: " + e; }
+}
+
+// ==================== SPECTRUM ====================
+function bar(label, val, warn, crit, suffix){
+  const v = parseFloat(val);
+  const wrap = document.createElement("div");
+  const lab = document.createElement("div"); lab.style.cssText = "font-size:11px;color:var(--dim);display:flex;justify-content:space-between";
+  lab.textContent = label;
+  const rv = document.createElement("span"); rv.textContent = `${isNaN(v) ? (val||"?") : v + (suffix||"%")}`;
+  lab.append(rv); wrap.append(lab);
+  const track = document.createElement("div"); track.style.cssText = "height:6px;background:#1a2130;border-radius:3px;overflow:hidden";
+  const fill = document.createElement("div");
+  const pct = isNaN(v) ? 0 : Math.min(100, v);
+  fill.style.cssText = `height:100%;width:${pct}%;border-radius:3px;background:${v>=crit?"var(--red)":v>=warn?"var(--amber)":"var(--green)"}`;
+  track.append(fill); wrap.append(track);
+  return wrap;
+}
+
+async function loadSpectrum(btn){
+  btn.disabled = true; const old = btn.textContent; btn.textContent = "HARVESTING…";
+  try{
+    let j = await (await fetch("/api/spectrum")).json();
+    if (j.harvesting){ await new Promise(r=>setTimeout(r, 6000)); j = await (await fetch("/api/spectrum")).json(); }
+    const grid = document.getElementById("spectrum-grid");
+    grid.replaceChildren();
+    for (const [name, m] of Object.entries(j.data||{})){
+      const card = document.createElement("div"); card.className = "card";
+      const h = document.createElement("h2"); h.textContent = name.toUpperCase();
+      const sub = document.createElement("div"); sub.className = "sub"; sub.textContent = `${m.addr} — ${m.label||""}`;
+      card.append(h, sub);
+      const box = document.createElement("div"); box.style.cssText = "display:flex;flex-direction:column;gap:10px";
+      box.append(bar("CPU", m.cpu, 70, 90, "%"));
+      box.append(bar("RAM", m.ram, 80, 92, "%"));
+      box.append(bar("DISK C:/", m.disk, 80, 90, "%"));
+      if (m.gpu){
+        const gu = m.gpu.util.replace(" %","");
+        box.append(bar("GPU (5090)", gu, 80, 95, "%"));
+        const vr = m.gpu.vram_used + " / " + m.gpu.vram_total + " · " + m.gpu.temp + "°C";
+        const g = document.createElement("div"); g.style.cssText = "font-size:11px;color:var(--violet)";
+        g.textContent = "VRAM " + vr; box.append(g);
+      }
+      if (m.latency_ms !== undefined){
+        const l = document.createElement("div"); l.style.cssText = "font-size:11px;color:var(--dim)";
+        l.textContent = "latency " + (typeof m.latency_ms === "number" ? m.latency_ms.toFixed(1)+" ms" : "no reply");
+        box.append(l);
+      }
+      if (m.error){ const e = document.createElement("div"); e.style.color = "var(--red)"; e.style.fontSize = "11px"; e.textContent = m.error; box.append(e); }
+      card.append(box); grid.append(card);
+    }
+    const at = document.createElement("div"); at.style.cssText = "grid-column:1/-1;color:var(--dim);font-size:11px";
+    at.textContent = "harvested " + (j.at || "—");
+    grid.append(at);
+  } finally { btn.disabled = false; btn.textContent = old; }
+}
+
+// ==================== ARMORY ====================
+let ARMORY = {tools: {}, apps: [], currentTool: null};
+
+function armoryLine(msg, cls){
+  const out = document.getElementById("armory-out");
+  const d = document.createElement("div");
+  const t = document.createElement("span"); t.className = "t"; t.textContent = `${new Date().toISOString().slice(11,19)}Z  `;
+  const s = document.createElement("span"); if (cls) s.className = cls;
+  s.textContent = msg;
+  d.append(t, s); out.prepend(d);
+  return s;
+}
+
+async function armoryLoad(btn){
+  btn.disabled = true; const old = btn.textContent; btn.textContent = "ENUMERATING…";
+  try{
+    const j = await (await fetch("/api/armory/catalog")).json();
+    ARMORY.tools = j.hexstrike_tools || [];
+    ARMORY.apps = j.apps || [];
+    const online = j.hexstrike_online;
+    document.getElementById("hex-status").textContent = online ? "● HEXSTRIKE ONLINE" : "● HEXSTRIKE OFFLINE";
+    document.getElementById("hex-status").style.color = online ? "var(--green)" : "var(--red)";
+    // tool picker: dropdown (90 tools) + quick-run button
+    const pick = document.getElementById("tool-picker");
+    pick.replaceChildren();
+    const sel = document.createElement("select");
+    sel.id = "armory-tool-select";
+    sel.style.cssText = "flex:1;background:var(--panel2);color:var(--txt);border:1px solid var(--line);border-radius:8px;padding:8px";
+    for (const [name, info] of Object.entries(ARMORY.tools)){
+      const o = document.createElement("option"); o.value = name;
+      o.textContent = `${name} — ${info.doc || ""}`;
+      sel.append(o);
+    }
+    sel.onchange = () => renderToolForm(sel.value);
+    const run = document.createElement("button"); run.className = "danger"; run.textContent = "⚡ DEPLOY TOOL";
+    run.onclick = () => armoryRun(sel.value);
+    const formBtn = document.createElement("button"); formBtn.textContent = "PARAMS";
+    formBtn.onclick = () => renderToolForm(sel.value);
+    pick.append(sel, formBtn, run);
+    renderAppGrid(document.getElementById("app-filter").value);
+    armoryLine(`armory loaded: ${Object.keys(ARMORY.tools).length} hexstrike tools, ${ARMORY.apps.length} apps. hexstrike ${online ? "ONLINE" : "OFFLINE"}`);
+  } finally { btn.disabled = false; btn.textContent = old; }
+}
+
+function renderToolForm(name){
+  const info = ARMORY.tools[name];
+  if (!info) return;
+  const form = document.getElementById("tool-form");
+  form.replaceChildren();
+  ARMORY.currentTool = name;
+  const title = document.createElement("div");
+  title.style.cssText = "font-size:12px;color:var(--dim);margin-bottom:6px";
+  title.textContent = `${name} params:`;
+  form.append(title);
+  const grid = document.createElement("div");
+  grid.style.cssText = "display:grid;grid-template-columns:repeat(auto-fill,minmax(220px,1fr));gap:8px";
+  for (const p of (info.params||[])){
+    const wrap = document.createElement("div");
+    const lab = document.createElement("div"); lab.style.cssText = "font-size:10px;color:var(--dim)";
+    lab.textContent = p.name + (p.default ? ` (def: ${p.default})` : "");
+    const inp = document.createElement("input");
+    inp.dataset.param = p.name;
+    inp.placeholder = p.default || "";
+    inp.style.cssText = "width:100%;background:var(--panel2);color:var(--txt);border:1px solid var(--line);border-radius:6px;padding:6px;font-size:12px";
+    wrap.append(lab, inp); grid.append(wrap);
+  }
+  form.append(grid);
+}
+
+async function armoryRun(name){
+  if (!name) return;
+  const line = armoryLine(`⚡ deploying ${name}…`, "running");
+  // collect params from form if present
+  const body = {};
+  document.querySelectorAll("#tool-form input[data-param]").forEach(i => {
+    if (i.value.trim()) body[i.dataset.param] = i.value.trim();
+    else if (i.placeholder && !["target","url"].includes(i.dataset.param)) body[i.dataset.param] = i.placeholder;
+  });
+  try{
+    const r = await fetch(`/api/armory/tool/${name}`, {method:"POST", body: JSON.stringify(body)});
+    const j = await r.json();
+    line.className = "done";
+    const summary = j.stdout ? j.stdout.slice(-800) : JSON.stringify(j).slice(0, 600);
+    line.textContent = `${name} completed in ${j.execution_time || "?"}s — output:`;
+    const out = document.createElement("div");
+    out.style.cssText = "white-space:pre-wrap;color:var(--txt);font-family:monospace;font-size:11px;padding:6px;background:#0d1119;border-radius:6px;margin-top:4px";
+    out.textContent = summary || "(no stdout)";
+    document.getElementById("armory-out").prepend(out);
+  }catch(e){ line.className = "failed"; line.textContent = `${name} failed: ${e}`; }
+}
+
+async function hexStart(btn){
+  btn.disabled = true;
+  const line = armoryLine("starting hexstrike server…", "running");
+  const r = await fetch("/api/armory/hexstrike/start", {method:"POST"});
+  const j = await r.json();
+  btn.disabled = false;
+  line.className = j.ok ? "done" : "failed";
+  line.textContent = "hexstrike: " + j.msg;
+  document.getElementById("hex-status").textContent = j.ok ? "● HEXSTRIKE ONLINE" : "● HEXSTRIKE OFFLINE";
+  document.getElementById("hex-status").style.color = j.ok ? "var(--green)" : "var(--red)";
+}
+
+async function hexProcesses(btn){
+  btn.disabled = true;
+  try{
+    const j = await (await fetch("/api/armory/processes")).json();
+    const out = document.getElementById("armory-out");
+    const d = document.createElement("div"); d.className = "t";
+    d.textContent = "process dashboard: " + JSON.stringify(j).slice(0, 400);
+    out.prepend(d);
+  } finally { btn.disabled = false; }
+}
+
+function hexRawToggle(btn){
+  const raw = document.getElementById("hex-raw");
+  raw.style.display = raw.style.display === "none" ? "flex" : "none";
+  btn.textContent = raw.style.display === "none" ? "RAW COMMAND MODE" : "CLOSE RAW MODE";
+}
+
+async function hexRaw(btn){
+  const cmd = document.getElementById("hex-cmd").value.trim();
+  if (!cmd) return;
+  const line = armoryLine(`$ ${cmd} — executing…`, "running");
+  try{
+    const r = await fetch("/api/armory/command", {method:"POST", body: JSON.stringify({command: cmd, use_cache: false})});
+    const j = await r.json();
+    line.className = "done";
+    line.textContent = `$ ${cmd} (${j.execution_time || "?"}s):`;
+    const out = document.createElement("div");
+    out.style.cssText = "white-space:pre-wrap;color:var(--txt);font-family:monospace;font-size:11px;padding:6px;background:#0d1119;border-radius:6px;margin-top:4px";
+    out.textContent = (j.stdout || j.error || "(no output)").slice(-1200);
+    document.getElementById("armory-out").prepend(out);
+  }catch(e){ line.className = "failed"; line.textContent = `raw exec failed: ${e}`; }
+}
+
+function renderAppGrid(filter){
+  const grid = document.getElementById("app-grid");
+  grid.replaceChildren();
+  const f = (filter||"").toLowerCase();
+  for (const a of ARMORY.apps){
+    if (f && !a.name.toLowerCase().includes(f) && !a.file.toLowerCase().includes(f)) continue;
+    const b = document.createElement("button");
+    b.style.cssText = "text-align:left;font-size:12px;padding:8px 10px";
+    b.textContent = a.name;
+    b.onclick = async () => {
+      b.disabled = true;
+      const r = await fetch(`/api/armory/launch/${a.file}`, {method:"POST"});
+      const j = await r.json();
+      armoryLine(`launch ${a.name}: ${j.msg}`, j.ok ? "done" : "failed");
+      setTimeout(()=>b.disabled=false, 2000);
+    };
+    grid.append(b);
+  }
+  if (!grid.children.length){
+    const d = document.createElement("div"); d.className = "t"; d.textContent = "no matches / load armory first";
+    grid.append(d);
+  }
+}
+
+// ==================== FORGE ====================
+function forgeLine(msg, cls){
+  const out = document.getElementById("forge-out");
+  const d = document.createElement("div");
+  const t = document.createElement("span"); t.className = "t"; t.textContent = `${new Date().toISOString().slice(11,19)}Z  `;
+  const s = document.createElement("span"); if (cls) s.className = cls;
+  s.textContent = msg;
+  d.append(t, s); out.prepend(d);
+}
+
+async function forgeSubmit(btn){
+  btn.disabled = true;
+  const act = document.getElementById("forge-act").value;
+  forgeLine(`submitting render job to ZEPHYRE: ${act} ×1 cycle…`, "running");
+  try{
+    const r = await fetch("/api/forge/submit", {method:"POST", body: JSON.stringify({acts:[act], cycles:1})});
+    const {op} = await r.json();
+    const iv = setInterval(async ()=>{
+      const s = await (await fetch("/api/state")).json();
+      const o = (s.ops||[]).find(x=>x.id===op.id);
+      if (o && o.state !== "running"){
+        clearInterval(iv); btn.disabled = false;
+        forgeLine(`job ${op.id}: ${o.state} — ${o.result}`, o.state);
+      }
+    }, 1200);
+  }catch(e){ btn.disabled = false; forgeLine("submit failed: " + e, "failed"); }
+}
+
+async function forgeStatus(btn){
+  btn.disabled = true;
+  try{
+    const j = await (await fetch("/api/forge/status")).json();
+    if (j.error){ forgeLine("pipeline: " + j.error, "failed"); }
+    else {
+      forgeLine(`queue: ${j.queue}`);
+      for (const c of (j.recent_cycles||[]).reverse())
+        forgeLine(`cycle ${c.cycle}: ${c.acts.join(", ")} — ${c.videos} videos sent (${(c.ts||"").slice(0,16)})`);
+    }
+  } finally { btn.disabled = false; }
+}
+
+async function forgeFetch(btn){
+  btn.disabled = true;
+  forgeLine("pulling newest artifacts ZEPHYRE -> kali hub through the fleet fabric…", "running");
+  try{
+    const r = await fetch("/api/forge/fetch", {method:"POST"});
+    const {op} = await r.json();
+    const iv = setInterval(async ()=>{
+      const s = await (await fetch("/api/state")).json();
+      const o = (s.ops||[]).find(x=>x.id===op.id);
+      if (o && o.state !== "running"){
+        clearInterval(iv); btn.disabled = false;
+        forgeLine(`fetch: ${o.state} — ${o.result}`, o.state);
+      }
+    }, 1500);
+  }catch(e){ btn.disabled = false; forgeLine("fetch failed: " + e, "failed"); }
+}
+</script>
+
+<div id="lockscreen" style="position:fixed;inset:0;background:rgba(5,7,12,.97);z-index:100;display:flex;align-items:center;justify-content:center">
+  <div style="background:var(--panel);border:1px solid var(--line);border-radius:16px;padding:34px 40px;width:420px;max-width:92vw;text-align:center">
+    <div style="font-size:38px;margin-bottom:6px">🔒</div>
+    <h2 style="letter-spacing:.12em;font-size:16px">FLEET COMMAND — LOCKED</h2>
+    <p id="lock-msg" style="color:var(--dim);font-size:12.5px;margin:10px 0 18px">authenticate with your device face unlock (passkey)</p>
+    <div style="display:flex;flex-direction:column;gap:10px">
+      <button class="primary" id="btn-face" style="padding:12px;font-size:14px" onclick="authFace()">.Unlock with Face ID / Passkey</button>
+      <button id="btn-pin-toggle" style="padding:8px;font-size:12px" onclick="togglePin()">use recovery PIN instead</button>
+      <div id="pin-box" style="display:none;gap:8px">
+        <input id="pin-input" type="password" placeholder="recovery PIN (min 8 chars)" style="flex:1;background:var(--panel2);color:var(--txt);border:1px solid var(--line);border-radius:8px;padding:8px">
+        <button onclick="authPin()">UNLOCK</button>
+      </div>
+      <button id="btn-enroll" style="display:none;padding:8px;font-size:12px;color:var(--amber)" onclick="enrollFace()">first-time: enroll this device as Admin passkey</button>
+    </div>
+    <div id="lock-err" style="color:var(--red);font-size:11.5px;margin-top:12px;min-height:14px"></div>
+  </div>
+</div>
+
+<script>
+// ======== SECURITY LAYER JS ========
+let AUTH_TOKEN = sessionStorage.getItem("fc_token") || "";
+const b64e = b => btoa(String.fromCharCode(...new Uint8Array(b))).replace(/\+/g,"-").replace(/\//g,"_").replace(/=+$/,"");
+const b64d = s => Uint8Array.from(atob(s.replace(/-/g,"+").replace(/_/g,"/")), c => c.charCodeAt(0));
+const ORIGIN_OK = () => location.hostname === "fleet.local";  // passkeys need the pinned origin
+
+function applyToken(tok){ AUTH_TOKEN = tok; sessionStorage.setItem("fc_token", tok); }
+function authedFetch(url, opts={}){
+  opts.headers = Object.assign({"Authorization": "Bearer " + AUTH_TOKEN}, opts.headers || {});
+  return fetch(url, opts);
+}
+
+async function checkAuth(){
+  if (AUTH_TOKEN){
+    const j = await (await fetch("/api/auth/state", {headers:{"Authorization":"Bearer "+AUTH_TOKEN}})).json();
+    if (j.session_valid){ document.getElementById("lockscreen").style.display = "none"; return true; }
+  }
+  const st = await (await fetch("/api/auth/state")).json();
+  document.getElementById("btn-enroll").style.display = (!st.enrolled && ORIGIN_OK()) ? "block" : "none";
+  document.getElementById("lockscreen").style.display = "flex";
+  return false;
+}
+
+async function enrollFace(){
+  if (!ORIGIN_OK()){ document.getElementById("lock-err").textContent = "open via https://fleet.local:9220 (passkeys require it)"; return; }
+  try{
+    const reg = await (await fetch("/api/auth/webauthn/register_begin")).json();
+    const pk = reg.publicKey;
+    pk.challenge = b64d(pk.challenge);
+    pk.user.id = b64d(pk.user.id);
+    const cred = await navigator.credentials.create({publicKey: pk});
+    const att = cred.response.attestationObject;
+    const finish = await fetch("/api/auth/webauthn/register_finish", {method:"POST",
+      headers:{"Content-Type":"application/json"},
+      body: JSON.stringify({
+        challenge: reg.publicKey.challenge,
+        clientDataJSON: b64e(cred.response.clientDataJSON),
+        attestationObject: b64e(att),
+        label: navigator.userAgent.slice(0, 40)
+      })});
+    const j = await finish.json();
+    if (j.ok){ applyToken(j.token); document.getElementById("lockscreen").style.display = "none"; location.reload(); }
+    else document.getElementById("lock-err").textContent = j.error;
+  }catch(e){ document.getElementById("lock-err").textContent = "enroll failed: " + e.message; }
+}
+
+async function authFace(){
+  if (!ORIGIN_OK()){ document.getElementById("lock-err").textContent = "open via https://fleet.local:9220 (passkeys require it)"; return; }
+  try{
+    const reg = await (await fetch("/api/auth/webauthn/assert_begin")).json();
+    const pk = reg.publicKey;
+    pk.challenge = b64d(pk.challenge);
+    const cred = await navigator.credentials.get({publicKey: pk});
+    const finish = await fetch("/api/auth/webauthn/assert_finish", {method:"POST",
+      headers:{"Content-Type":"application/json"},
+      body: JSON.stringify({
+        challenge: reg.publicKey.challenge,
+        credentialId: cred.id,
+        clientDataJSON: b64e(cred.response.clientDataJSON),
+        authenticatorData: b64e(cred.response.authenticatorData),
+        signature: b64e(cred.response.signature)
+      })});
+    const j = await finish.json();
+    if (j.ok){ applyToken(j.token); document.getElementById("lockscreen").style.display = "none"; location.reload(); }
+    else document.getElementById("lock-err").textContent = j.error;
+  }catch(e){ document.getElementById("lock-err").textContent = "face unlock failed: " + (e.name === "NotAllowedError" ? "denied/cancelled" : e.message); }
+}
+
+function togglePin(){ const b = document.getElementById("pin-box"); b.style.display = b.style.display === "none" ? "flex" : "none"; }
+
+async function authPin(){
+  const pin = document.getElementById("pin-input").value;
+  const r = await fetch("/api/auth/pin/login", {method:"POST", headers:{"Content-Type":"application/json"}, body: JSON.stringify({pin})});
+  const j = await r.json();
+  if (j.ok){ applyToken(j.token); document.getElementById("lockscreen").style.display = "none"; location.reload(); }
+  else document.getElementById("lock-err").textContent = j.error;
+}
+
+// gate every api call through authedFetch for the existing console code
+const _origFetch = window.fetch;
+window.fetch = function(url, opts){
+  opts = opts || {};
+  if (typeof url === "string" && url.startsWith("/api/") && !url.startsWith("/api/auth/") && AUTH_TOKEN){
+    opts.headers = Object.assign({"Authorization": "Bearer " + AUTH_TOKEN}, opts.headers || {});
+  }
+  return _origFetch(url, opts);
+};
+
+checkAuth();
+</script>
+</body>
+</body>
+</html>

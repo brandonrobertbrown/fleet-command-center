@@ -1,0 +1,6 @@
+fleet_hosts.json
+fleet_auth.json
+*.log
+__pycache__/
+.DS_Store
+certs/

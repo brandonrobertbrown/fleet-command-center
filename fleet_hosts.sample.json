@@ -1,0 +1,51 @@
+{
+  "render-rig": {
+    "addr": "192.168.1.10",
+    "user": "you",
+    "method": "ssh",
+    "remote_root": "C:/Users/you/fleet_sync",
+    "note": "Windows GPU rig. LIVE fleet member.",
+    "mac": "AA:BB:CC:DD:EE:01",
+    "label": "RENDER RIG \u2014 GPU workstation",
+    "ports": {
+      "dashboard": 9119,
+      "webhook": 8644
+    },
+    "status": "LIVE"
+  },
+  "laptop-1": {
+    "addr": "192.168.1.11",
+    "user": "you",
+    "method": "ssh",
+    "remote_root": "C:/Users/you/fleet_sync",
+    "note": "Windows laptop. LIVE fleet member.",
+    "mac": "AA:BB:CC:DD:EE:02",
+    "label": "LAPTOP-1 \u2014 daily driver",
+    "ports": {
+      "dashboard": 9119
+    },
+    "status": "LIVE"
+  },
+  "nuc-1": {
+    "addr": "192.168.1.12",
+    "user": "you",
+    "method": "ssh",
+    "remote_root": "/home/you/fleet_sync",
+    "note": "Mini PC. PENDING sshd setup.",
+    "label": "NUC-1 \u2014 pending",
+    "ports": {},
+    "status": "PENDING"
+  },
+  "hub": {
+    "addr": "192.168.1.2",
+    "user": "you",
+    "method": "local",
+    "remote_root": "/home/YOURUSER/fleet_sync",
+    "note": "HUB \u2014 this box. Probes run natively, no ssh-to-self.",
+    "label": "HUB \u2014 this machine",
+    "ports": {
+      "console": 9220
+    },
+    "status": "LIVE"
+  }
+}
