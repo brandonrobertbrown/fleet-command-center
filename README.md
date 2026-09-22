@@ -12,7 +12,7 @@ laptops, NUCs — and is tired of SSHing into five terminals to answer
 
 ```
 ┌─────────────────────────────────────────────────────┐
-│  FLEET COMMAND CENTER          https://kali.local:9220 │
+│  FLEET COMMAND CENTER          https://your-hub.local:9220 │
 ├──────────┬──────────┬──────────────┬─────────────────┤
 │ KALI     │ ZEPHYRE  │ TEMPORALFLOW │ NUC25           │
 │ ONLINE   │ ONLINE   │ ONLINE       │ PENDING         │
@@ -48,7 +48,7 @@ One Python file + one HTML file. Standard library only. If your box runs
 Python 3, it runs this. No npm install, no docker pull, no config yaml.
 
 ```bash
-git clone https://github.com/YOU/fleet-command-center.git
+git clone https://github.com/brandonrobertbrown/fleet-command-center.git
 cd fleet-command-center
 python3 fleet_command.py          # serves https://yourhost.local:9220
 ```
@@ -67,7 +67,12 @@ See `screenshots/` — dark ops-console UI, mobile-friendly.
 
 ## License
 MIT. See [LICENSE](LICENSE). If it makes your homelab life better, a ⭐ or
-[sponsorship](https://github.com/sponsors/YOU) keeps development alive.
+[sponsorship](https://github.com/sponsors/brandonrobertbrown) keeps development alive.
+
+Want the armored version? The same author ships
+[homelab & AI-ops playbooks at Alpha Desk](https://brandonrobertbrown.github.io/coach-empire-store/) —
+including the [Homelab Ops Command Pack](https://coachcaptain.gumroad.com) with the
+maintenance schedules and credential trackers this console pairs with.
 
 ---
 *Forged in a real 24/7 AI fleet running renders, red-team tooling, and a very

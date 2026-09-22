@@ -62,7 +62,7 @@ footer{max-width:1280px;margin:0 auto;padding:10px 22px 30px;color:var(--dim);fo
 <header>
   <h1>FLEET <span>COMMAND</span> CENTER</h1>
   <div class="hdr-meta">
-    <span>HUB <b>kali · 192.168.1.2</b></span>
+    <span>HUB <b>your-hub · your-hub.local</b></span>
     <span id="clock">—</span>
     <span><span class="lamp g" id="probe-lamp"></span><span id="probe-at">probes idle</span></span>
   </div>
@@ -120,7 +120,7 @@ footer{max-width:1280px;margin:0 auto;padding:10px 22px 30px;color:var(--dim);fo
     </div>
     <div id="hex-raw" style="display:none; margin:10px 0">
       <div style="display:flex; gap:8px">
-        <input id="hex-cmd" placeholder="raw shell command (runs on kali via hexstrike)..."
+        <input id="hex-cmd" placeholder="raw shell command (runs on your-hub via hexstrike)..."
           style="flex:1;background:var(--panel2);color:var(--txt);border:1px solid var(--line);border-radius:8px;padding:8px;font-family:monospace">
         <button class="danger" onclick="hexRaw(this)">EXECUTE</button>
       </div>
@@ -131,7 +131,7 @@ footer{max-width:1280px;margin:0 auto;padding:10px 22px 30px;color:var(--dim);fo
   </section>
 
   <section id="apps-sec">
-    <h3>📦 APP LAUNCHER — every desktop app on the kali box</h3>
+    <h3>📦 APP LAUNCHER — every desktop app on the your-hub box</h3>
     <div class="toolbar"><input id="app-filter" placeholder="filter apps..." oninput="renderAppGrid(this.value)"
       style="background:var(--panel2);color:var(--txt);border:1px solid var(--line);border-radius:8px;padding:8px;flex:1"></div>
     <div id="app-grid" style="display:grid;grid-template-columns:repeat(auto-fill,minmax(200px,1fr));gap:8px;margin-top:10px"></div>
@@ -145,7 +145,7 @@ footer{max-width:1280px;margin:0 auto;padding:10px 22px 30px;color:var(--dim);fo
     </table>
   </section>
 </main>
-<footer>Fleet Command Center v1.0 — kali hub · engine: operator_fleet_sync.py · fleet_hosts.json is the single source of truth</footer>
+<footer>Fleet Command Center v1.0 — your hub · engine: operator_fleet_sync.py · fleet_hosts.json is the single source of truth</footer>
 
 <script>
 const $ = s => document.querySelector(s);
@@ -608,7 +608,7 @@ async function forgeStatus(btn){
 
 async function forgeFetch(btn){
   btn.disabled = true;
-  forgeLine("pulling newest artifacts ZEPHYRE -> kali hub through the fleet fabric…", "running");
+  forgeLine("pulling newest artifacts ZEPHYRE -> your hub through the fleet fabric…", "running");
   try{
     const r = await fetch("/api/forge/fetch", {method:"POST"});
     const {op} = await r.json();

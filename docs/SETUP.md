@@ -20,7 +20,7 @@ Edit `fleet_hosts.json`:
 ```json
 {
   "my-rig": {
-    "addr": "192.168.1.50",
+    "addr": "192.0.2.50",
     "user": "you",
     "method": "ssh",
     "remote_root": "/home/you/fleet_sync",

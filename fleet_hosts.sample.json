@@ -1,6 +1,6 @@
 {
   "render-rig": {
-    "addr": "192.168.1.10",
+    "addr": "your-render-box",
     "user": "you",
     "method": "ssh",
     "remote_root": "C:/Users/you/fleet_sync",
@@ -37,7 +37,7 @@
     "status": "PENDING"
   },
   "hub": {
-    "addr": "192.168.1.2",
+    "addr": "your-hub.local",
     "user": "you",
     "method": "local",
     "remote_root": "/home/YOURUSER/fleet_sync",

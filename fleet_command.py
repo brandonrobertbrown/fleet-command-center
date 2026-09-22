@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """Operator Fleet Command Center — one GUI to oversee and direct the whole fleet.
 
-Serves from the kali hub on http://192.168.1.2:9220 (any LAN browser).
+Serves from the your hub on http://your-hub.local:9220 (any LAN browser).
 Stdlib only. Backend drives the real fleet: fleet_hosts.json, the sync engine,
 live probes, wake-on-LAN, and the sync audit log.
 
@@ -94,7 +94,7 @@ def probe_host(name, h):
     if local:
         st["ssh_up"] = True
         st["ssh_ok"] = True
-        st["os_hint"] = "kali (hub — local probes)"
+        st["os_hint"] = "your-hub (hub — local probes)"
         st["state"] = "ONLINE"
         return st
     ssh_up = tcp_probe(h["addr"], 22) if st["ping"] else False
@@ -144,7 +144,7 @@ def wol(mac):
         s.setsockopt(socket.SOL_SOCKET, socket.SO_BROADCAST, 1)
         s.sendto(pkt, ("255.255.255.255", 9))
         # also directed broadcast to the /24 in case the router filters global bcast
-        s.sendto(pkt, ("192.168.1.255", 9))
+        s.sendto(pkt, ("your-lan-broadcast", 9))
         s.close()
         return True, f"magic packet sent to {mac}"
     except Exception as e:
@@ -218,8 +218,8 @@ def launch_op(kind, host=None, target=None, params=None):
     if kind == "probe_all":
         threading.Thread(target=_wrap, args=(lambda: (_probe_store(probe_all()), "fleet probe complete"),), daemon=True).start()
     elif kind == "wake":
-        if host == "kali":
-            threading.Thread(target=_wrap, args=(lambda: (True, "kali is the hub — always awake"),), daemon=True).start()
+        if host == "your-hub":
+            threading.Thread(target=_wrap, args=(lambda: (True, "your-hub is the hub — always awake"),), daemon=True).start()
         else:
             mac = load_hosts().get(host, {}).get("mac")
             threading.Thread(target=_wrap, args=(wol, mac), daemon=True).start()
@@ -259,7 +259,7 @@ def _probe_store(results):
     return results
 
 # ================================================================ TOOL 1: THUNDER (fleet broadcast)
-# One command, every live host, per-OS mapped, aggregated. kali is the thundercloud.
+# One command, every live host, per-OS mapped, aggregated. your-hub is the thundercloud.
 
 PS_WRAP = 'powershell -NoProfile -Command "{}"'
 OS_CMD = {
@@ -325,7 +325,7 @@ def thunder(cmd_key):
     return len(results) > 0, json.dumps(results, indent=1)[:1800]
 
 # ================================================================ TOOL 2: SPECTRUM (combined telemetry)
-# Parallel metric harvest from every member -> one fleet pulse. GPU from Zephyre, CPU/RAM/disk from all.
+# Parallel metric harvest from every member -> one fleet pulse. GPU from your-render-rig, CPU/RAM/disk from all.
 
 def _ssh_out(h, cmd, timeout=25):
     r = subprocess.run(
@@ -363,7 +363,7 @@ def spectrum():
             if _host_is_win(h):
                 # -EncodedCommand: base64(UTF-16LE) script survives cmd.exe + ssh + every
                 # shell layer unmangled (learned the hard way — single-quote wrapping
-                # worked on Zephyre but laptop-1's default shell ate the quotes).
+                # worked on your-render-rig but laptop-1's default shell ate the quotes).
                 import base64 as _b64
                 script = (
                     "$c=Get-CimInstance Win32_Processor | Measure-Object -Property LoadPercentage -Average; "
@@ -392,7 +392,7 @@ def spectrum():
     for t in threads: t.start()
     for t in threads: t.join(timeout=40)
 
-    # GPU layer: Zephyre's 5090 (the fleet's heavy metal)
+    # GPU layer: your-render-rig's 5090 (the fleet's heavy metal)
     z = load_hosts().get("render-rig", {})
     if z.get("addr"):
         try:
@@ -402,9 +402,9 @@ def spectrum():
                 out["render-rig"]["gpu"] = {"util": parts[0], "vram_used": parts[1], "vram_total": parts[2], "temp": parts[3]}
         except Exception:
             pass
-    # hub latency snapshot (kali's view of the fleet)
+    # hub latency snapshot (your-hub's view of the fleet)
     for name, m in out.items():
-        if name == "kali": continue
+        if name == "your-hub": continue
         r = subprocess.run(["ping", "-c", "1", "-W", "2", m["addr"]], capture_output=True, timeout=6)
         m["latency_ms"] = (r.returncode == 0)
         if r.returncode == 0:
@@ -418,7 +418,7 @@ LAST_SPECTRUM = {"at": None, "data": {}}
 
 
 # ================================================================ TOOL 4: ARMORY (hexstrike battle bridge + app launcher)
-# Full red-team command of the kali box from any device: 90 hexstrike tools,
+# Full red-team command of the your-hub box from any device: 90 hexstrike tools,
 # raw command execution, process control, and every desktop app launchable.
 
 HEXSTRIKE = "http://127.0.0.1:8888"
@@ -488,15 +488,15 @@ def armory_hexstrike_start():
     return False, "hexstrike failed to become healthy within 60s"
 
 # ================================================================ TOOL 3: FORGE (GPU render bridge)
-# Offload render jobs to Zephyre's RTX 5090, watch the pipeline, pull artifacts
-# back over the fleet fabric. kali orchestrates, Zephyre renders, console shows progress.
+# Offload render jobs to your-render-rig's RTX 5090, watch the pipeline, pull artifacts
+# back over the fleet fabric. your-hub orchestrates, your-render-rig renders, console shows progress.
 
 FORGE_ROOT = "D:/Operator_Cum_Worship_Packs"
 FORGE_JOBS = FORGE_ROOT + "/forge_jobs"
 FORGE_SCRIPT = FORGE_ROOT + "/worship_motion_v2.py"   # proven render pipeline
 
 def forge_submit(acts, cycles=1):
-    """Queue a render: writes a job manifest on Zephyre; its cron/render loop picks it up.
+    """Queue a render: writes a job manifest on your-render-rig; its cron/render loop picks it up.
     Operator's pipeline is cron-driven, so we stage the request file the loop reads.
     Transfer = base64 -> [Convert]::FromBase64String: zero quoting hazards (JSON's
     double quotes get shredded by cmd.exe otherwise)."""
@@ -508,10 +508,10 @@ def forge_submit(acts, cycles=1):
                 f"[Text.Encoding]::UTF8.GetString([Convert]::FromBase64String('{b64}')))\"")
     r = subprocess.run(
         ["ssh", "-i", str(IDENTITY), "-o", "BatchMode=yes", "-o", "ConnectTimeout=8",
-         "brand@192.168.1.10", write_ps], capture_output=True, text=True, timeout=30)
+         "admin@your-render-box", write_ps], capture_output=True, text=True, timeout=30)
     # verify readback parses as the manifest we sent (write + verify, never assume)
     v = subprocess.run(
-        ["ssh", "-i", str(IDENTITY), "-o", "BatchMode=yes", "brand@192.168.1.10",
+        ["ssh", "-i", str(IDENTITY), "-o", "BatchMode=yes", "admin@your-render-box",
          f"powershell -NoProfile -Command \"Get-Content '{FORGE_JOBS}/job_request.json' -Raw\""],
         capture_output=True, text=True, timeout=25)
     try:
@@ -527,7 +527,7 @@ def forge_status():
     """Live pipeline view: last cycles from motion_v2 log + job queue state."""
     r = subprocess.run(
         ["ssh", "-i", str(IDENTITY), "-o", "BatchMode=yes", "-o", "ConnectTimeout=8",
-         "brand@192.168.1.10",
+         "admin@your-render-box",
          f"powershell -NoProfile -Command \"Get-Content {FORGE_ROOT}/motion_v2_log.jsonl -Tail 3\""],
         capture_output=True, text=True, timeout=25)
     log = []
@@ -537,7 +537,7 @@ def forge_status():
             try: log.append(json.loads(line))
             except Exception: pass
     q = subprocess.run(
-        ["ssh", "-i", str(IDENTITY), "-o", "BatchMode=yes", "brand@192.168.1.10",
+        ["ssh", "-i", str(IDENTITY), "-o", "BatchMode=yes", "admin@your-render-box",
          f"cmd /c if exist {FORGE_JOBS}\\job_request.json (cmd /c type {FORGE_JOBS}\\job_request.json) else (echo NO-JOB)"],
         capture_output=True, text=True, timeout=20)
     qtxt = (q.stdout or "").strip()
@@ -546,15 +546,15 @@ def forge_status():
 
 def forge_fetch(name="latest"):
     """Pull newest artifact set back through the fabric into the hub."""
-    # find newest cycle dir on Zephyre
+    # find newest cycle dir on your-render-rig
     r = subprocess.run(
-        ["ssh", "-i", str(IDENTITY), "-o", "BatchMode=yes", "brand@192.168.1.10",
+        ["ssh", "-i", str(IDENTITY), "-o", "BatchMode=yes", "admin@your-render-box",
          f"powershell -NoProfile -Command \"(Get-ChildItem {FORGE_ROOT}/motion_v2 -Directory | Sort-Object Name -Descending | Select-Object -First 1).Name\""],
         capture_output=True, text=True, timeout=20)
     cyc = (r.stdout or "").strip().splitlines()[-1].strip() if (r.stdout or "").strip() else ""
     if not cyc:
-        return False, "no cycle dirs found on Zephyre"
-    src = f"brand@192.168.1.10:{FORGE_ROOT}/motion_v2/{cyc}/*"
+        return False, "no cycle dirs found on your-render-rig"
+    src = f"admin@your-render-box:{FORGE_ROOT}/motion_v2/{cyc}/*"
     dst = f"{HOME}/Empire/shared/forge_artifacts/{cyc}"
     os.makedirs(dst, exist_ok=True)
     p = subprocess.run(["scp", "-i", str(IDENTITY), "-o", "BatchMode=yes", src, dst + "/"],
@@ -803,7 +803,7 @@ class Handler(BaseHTTPRequestHandler):
         if path == "/api/state":
             hosts = load_hosts()
             return self._json({
-                "version": VERSION, "now": utcnow(), "hub": "kali (this box)",
+                "version": VERSION, "now": utcnow(), "hub": "your-hub (this box)",
                 "hosts": LAST_PROBE["hosts"] or {n: {"state": "UNKNOWN", "addr": h["addr"], "label": h.get("label", n)}
                                                  for n, h in hosts.items()},
                 "probe_at": LAST_PROBE["at"],
@@ -1059,7 +1059,7 @@ def main():
         srv.socket = ctx.wrap_socket(srv.socket, server_side=True)
         print(f"Fleet Command Center v{VERSION} -> https://fleet.local:{port} (TLS on)", flush=True)
     else:
-        print(f"Fleet Command Center v{VERSION} -> http://192.168.1.2:{port} (NO TLS — passkeys disabled)", flush=True)
+        print(f"Fleet Command Center v{VERSION} -> http://your-hub.local:{port} (NO TLS — passkeys disabled)", flush=True)
     srv.serve_forever()
 
 if __name__ == "__main__":
