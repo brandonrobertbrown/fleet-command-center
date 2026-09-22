@@ -455,7 +455,7 @@ def armory_catalog(force=False):
     health = _hexstrike_health()
     ARMORY_CATALOG["hexstrike_online"] = bool(health)
     ARMORY_CATALOG["health"] = health
-    apps_path = HOME / "Empire/shared/kali_app_catalog.json"
+    apps_path = HOME / "Empire/shared/app_catalog.json"
     if apps_path.is_file():
         ARMORY_CATALOG["apps"] = json.loads(apps_path.read_text())
     ARMORY_CATALOG["at"] = utcnow()
